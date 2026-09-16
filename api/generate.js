@@ -20,8 +20,8 @@ module.exports = async (req, res) => {
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY가 세팅되지 않았습니다.' });
 
   const payload = JSON.stringify({
-    // 날짜 버전을 제외한 표준 별칭(Alias)으로 변경
-    model: 'claude-3-5-sonnet',
+    // 피그마 플러그인에서 성공한 Haiku 모델 지정
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 1000,
     messages: [
       {
