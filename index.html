@@ -236,13 +236,19 @@ Note: [note]`,
       updateFinalPrompt();
     }
 
-    function updateFinalPrompt() {
-      const template = BASE_PROMPTS[currentStyle] || BASE_PROMPTS['2D 플랫'];
-      const targetText = selectedEnglishText || "[선택된 영어 문장]";
-      const full = template.replace('{{SELECTED_TEXT}}', targetText);
-      document.getElementById('finalResult').value = full;
-    }
+   function updateFinalPrompt() {
+  const keyword = document.getElementById('keyword').value.trim() || "[subject]";
+  const note = selectedEnglishText || "[note]";
+  
+  let template = BASE_PROMPTS[currentStyle] || BASE_PROMPTS['2D 플랫'];
 
+  // [subject]와 [note] 태그 치환 (대소문자/전체 치환 처리)
+  const full = template
+    .replaceAll('[subject]', keyword)
+    .replaceAll('[note]', note);
+
+  document.getElementById('finalResult').value = full;
+}
     function copyResult() {
       const text = document.getElementById('finalResult').value;
       if (!text) return;
