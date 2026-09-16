@@ -1,64 +1,55 @@
-export default async function handler(req, res) {
-  // CORS 처리
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+import Anthropic from '@anthropic-ai/sdk';
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+export default async function handler(req, res) {
+  // CORS 및 HTTP 메소드 제어
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
   const { keyword } = req.body || {};
-  if (!keyword) return res.status(400).json({ error: '키워드를 입력해주세요.' });
+  if (!keyword) {
+    return res.status(400).json({ error: '키워드를 입력해주세요.' });
+  }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'Vercel에 ANTHROPIC_API_KEY 환경변수가 세팅되지 않았습니다.' });
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY가 설정되지 않았습니다.' });
   }
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey.trim(),
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        // 피그마 플러그인 등에서도 표준으로 사용하는 Claude 3.5 Sonnet 최신 식별자
-        model: 'claude-3-5-sonnet-20241022',
-        max_tokens: 1000,
-        messages: [
-          {
-            role: 'user',
-            content: `주제 키워드: "${keyword}"
+    const anthropic = new Anthropic({ apiKey: apiKey.trim() });
+
+    const response = await anthropic.messages.create({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 1000,
+      messages: [
+        {
+          role: 'user',
+          content: `주제 키워드: "${keyword}"
 이 키워드에 맞는 다양한 구도/동작의 아이콘 묘사 문장 3개를 생성해줘.
-반드시 다른 설명이나 마크다운 형식(```json 등) 없이 아래 pure JSON 배열 형식으로만 응답해줘.
+반드시 마크다운 코드블록(```)이나 부연설명 없이, pure JSON 배열 형식으로만 응답해줘.
 
 [
   {"ko": "몸을 동그랗게 말고 잠든 듯한 고양이", "en": "a cat curled into a tight, sleeping ball"},
   {"ko": "고개를 살짝 기울인 채 앉아있는 동글동글한 고양이", "en": "a round, chubby cat sitting with its head tilted"},
   {"ko": "웅크리고 앉아 꼬리를 동그랗게 만 통통한 고양이", "en": "a plump cat curled up with its tail wrapped around itself"}
 ]`
-          }
-        ]
-      })
+        }
+      ]
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      // Anthropic API에서 전달해주는 실제 에러 메시지 팝업 출력
-      const errMsg = data.error?.message || JSON.stringify(data);
-      return res.status(response.status).json({ error: `[Anthropic API ${response.status}] ${errMsg}` });
-    }
-
-    const rawContent = data.content?.[0]?.text?.trim() || '[]';
-    // 마크다운 코드블록 제거 처리
-    const cleanJson = rawContent.replace(/```json/g, '').replace(/```/g, '').trim();
+    const rawText = response.content[0].text.trim();
+    // Claude가 혹시 마크다운을 섞어 보냈을 경우 대비 안전 파싱
+    const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
     const suggestions = JSON.parse(cleanJson);
-    
+
     return res.status(200).json({ suggestions });
+
   } catch (error) {
-    return res.status(500).json({ error: `서버 내부 오류: ${error.message}` });
+    // Vercel 에러가 나더라도 클라이언트가 읽을 수 있도록 항상 JSON 구조 유지
+    return res.status(500).json({ error: `API 오류: ${error.message}` });
   }
 }
