@@ -1,12 +1,109 @@
-async function fetchSuggestions() {
-      const keyword = document.getElementById('keyword').value.trim();
-      if (!keyword) return alert('키워드를 입력하세요.');
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>아이콘 프롬프트 생성기</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f4f5; max-width: 680px; margin: 40px auto; padding: 20px; color: #18181b; }
+    .card { background: white; border-radius: 16px; padding: 28px; border: 1px solid #e4e4e7; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+    h1 { font-size: 24px; font-weight: 800; margin: 0 0 8px 0; }
+    .sub-desc { color: #71717a; font-size: 13.5px; line-height: 1.5; margin-bottom: 24px; }
+    
+    .label { font-size: 12px; font-weight: 700; color: #52525b; margin-bottom: 8px; display: block; }
+    .style-btns { display: flex; gap: 8px; margin-bottom: 20px; }
+    .style-btn { border: 1px solid #e4e4e7; background: #f4f4f5; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; color: #52525b; }
+    .style-btn.active { background: #000; color: white; border-color: #000; }
+    
+    .input-group { display: flex; gap: 8px; margin-bottom: 8px; }
+    input[type="text"] { flex: 1; padding: 12px 16px; border: 1px solid #e4e4e7; border-radius: 10px; font-size: 14px; outline: none; background: #f9f9fb; }
+    .btn-submit { background: #09090b; color: white; border: none; padding: 0 18px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; }
+    .btn-submit:disabled { opacity: 0.5; }
+    
+    .category-tag { font-size: 12px; color: #71717a; margin-bottom: 24px; }
+    
+    .suggestion-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+    .suggestion-item { border: 1px solid #e4e4e7; border-radius: 12px; padding: 14px 16px; cursor: pointer; display: flex; gap: 12px; align-items: flex-start; transition: all 0.2s; }
+    .suggestion-item.selected { border: 2px solid #000; background: #fafafa; }
+    .radio-circle { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #a1a1aa; margin-top: 2px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .suggestion-item.selected .radio-circle { border-color: #000; background: #000; }
+    .suggestion-item.selected .radio-circle::after { content: "✓"; color: white; font-size: 11px; }
+    .item-ko { font-size: 14px; font-weight: 700; color: #18181b; margin-bottom: 4px; }
+    .item-en { font-size: 13px; font-family: monospace; color: #52525b; }
+    
+    .result-container { position: relative; }
+    .btn-copy { position: absolute; right: 12px; top: 12px; background: #f4f4f5; border: 1px solid #e4e4e7; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    textarea { width: 100%; height: 260px; padding: 16px; border: 1px solid #e4e4e7; border-radius: 10px; font-family: monospace; font-size: 12px; line-height: 1.6; background: #fcfcfc; resize: vertical; box-sizing: border-box; }
+  </style>
+</head>
+<body>
+
+  <h1>아이콘 프롬프트 생성기</h1>
+  <p class="sub-desc">키워드 하나만 입력하면 Claude가 그 주제에 맞는 한국어+영어 묘사를 새로 만들어, 고정 스타일 프롬프트에 끼운 완성된 프롬프트로 돌려드려요. 어떤 키워드든 영어로 나와요.</p>
+
+  <div class="card">
+    <span class="label">아이콘 스타일</span>
+    <div class="style-btns">
+      <button class="style-btn active" onclick="setStyle('2D 플랫 v1')">2D 플랫 v1</button>
+      <button class="style-btn" onclick="setStyle('2D 플랫 v2')">2D 플랫 v2</button>
+      <button class="style-btn" onclick="setStyle('3D 스타일')">3D 스타일</button>
+    </div>
+
+    <span class="label">주제 키워드</span>
+    <div class="input-group">
+      <input type="text" id="keyword" placeholder="고양이" onkeypress="if(event.key==='Enter') fetchSuggestions()">
+      <button class="btn-submit" id="submitBtn" onclick="fetchSuggestions()">문장 제안받기</button>
+    </div>
+    <div class="category-tag" id="statusTag"></div>
+
+    <span class="label">추천 문장 · 하나를 선택하세요</span>
+    <div class="suggestion-list" id="suggestionList">
+      <div style="color: #a1a1aa; font-size: 13px; text-align: center; padding: 20px; border: 1px dashed #e4e4e7; border-radius: 10px;">
+        키워드를 입력하고 문장 제안받기 버튼을 눌러주세요.
+      </div>
+    </div>
+
+    <div class="result-container">
+      <span class="label">완성된 전체 프롬프트</span>
+      <button class="btn-copy" onclick="copyResult()">복사</button>
+      <textarea id="finalResult" readonly></textarea>
+    </div>
+  </div>
+
+  <script>
+    let selectedEnglishText = "";
+
+    const BASE_PROMPT_TEMPLATE = `Create a cohesive set of minimalist flat vector icons.
+
+SUBJECT: {{SELECTED_TEXT}}
+
+STYLE RULES:
+* Exactly 3 colors per icon
+* Choose 3 colors that best match the subject's metaphor, meaning, function, and emotional character
+* Use one dominant tone, one supporting tone, and one small accent tone
+* The 3 colors should feel cohesive, expressive, and naturally associated with the subject
+* White background
+* Solid flat colors only
+* No outlines, strokes, borders, frames, rings, or line-like elements
+* No gradients, shadows, texture, highlights, or 3D effects`;
+
+    function setStyle(name) {
+      document.querySelectorAll('.style-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.innerText === name);
+      });
+    }
+
+    async function fetchSuggestions() {
+      const keywordInput = document.getElementById('keyword');
+      const keyword = keywordInput.value.trim();
+      if (!keyword) return alert('키워드를 입력해주세요.');
 
       const btn = document.getElementById('submitBtn');
       const list = document.getElementById('suggestionList');
       btn.disabled = true;
       btn.innerText = '생성 중...';
-      document.getElementById('statusTag').innerText = `키워드 분석 및 문장 생성 중...`;
+      document.getElementById('statusTag').innerText = `카테고리: 분석 중...`;
 
       try {
         const res = await fetch('/api/generate', {
@@ -15,36 +112,35 @@ async function fetchSuggestions() {
           body: JSON.stringify({ keyword: keyword })
         });
 
-        // 텍스트 형태로 먼저 읽어 파싱 에러 방지
         const text = await res.text();
         let data;
         try {
           data = JSON.parse(text);
         } catch (e) {
-          throw new Error(`서버가 JSON이 아닌 응답을 반환했습니다: ${text.substring(0, 100)}`);
+          throw new Error('서버 응답 오류: ' + text.substring(0, 100));
         }
 
         if (!res.ok || data.error) {
-          throw new Error(data.error || `HTTP 에러 ${res.status}`);
+          throw new Error(data.error || '알 수 없는 에러가 발생했습니다.');
         }
 
         list.innerHTML = '';
         data.suggestions.forEach((item, idx) => {
           const div = document.createElement('div');
-          div.className = `suggestion-item ${idx === 0 ? 'selected' : ''}`;
-          div.onclick = () => selectItem(div, item.en);
-          div.innerHTML = `
-            <div class="radio-circle"></div>
-            <div>
-              <div class="item-ko">${item.ko}</div>
-              <div class="item-en">${item.en}</div>
-            </div>
-          `;
+          div.className = 'suggestion-item' + (idx === 0 ? ' selected' : '');
+          div.onclick = function() { selectItem(div, item.en); };
+          div.innerHTML = '<div class="radio-circle"></div>' +
+                          '<div>' +
+                            '<div class="item-ko">' + item.ko + '</div>' +
+                            '<div class="item-en">' + item.en + '</div>' +
+                          '</div>';
           list.appendChild(div);
         });
 
-        selectItem(list.children[0], data.suggestions[0].en);
-        document.getElementById('statusTag').innerText = `카테고리: [${keyword}] 인식 완료`;
+        if (data.suggestions.length > 0) {
+          selectItem(list.children[0], data.suggestions[0].en);
+        }
+        document.getElementById('statusTag').innerText = `카테고리: [${keyword}] (기본 규칙)`;
 
       } catch (err) {
         alert('생성 실패: ' + err.message);
@@ -53,3 +149,26 @@ async function fetchSuggestions() {
         btn.innerText = '문장 제안받기';
       }
     }
+
+    function selectItem(element, enText) {
+      document.querySelectorAll('.suggestion-item').forEach(el => el.classList.remove('selected'));
+      element.classList.add('selected');
+      selectedEnglishText = enText;
+      updateFinalPrompt();
+    }
+
+    function updateFinalPrompt() {
+      const full = BASE_PROMPT_TEMPLATE.replace('{{SELECTED_TEXT}}', selectedEnglishText);
+      document.getElementById('finalResult').value = full;
+    }
+
+    function copyResult() {
+      const text = document.getElementById('finalResult').value;
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => alert('클립보드에 복사되었습니다!'));
+    }
+
+    updateFinalPrompt();
+  </script>
+</body>
+</html>
