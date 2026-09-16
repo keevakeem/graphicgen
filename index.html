@@ -13,7 +13,7 @@
     
     .label { font-size: 12px; font-weight: 700; color: #52525b; margin-bottom: 8px; display: block; }
     .style-btns { display: flex; gap: 8px; margin-bottom: 20px; }
-    .style-btn { border: 1px solid #e4e4e7; background: #f4f4f5; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; color: #52525b; }
+    .style-btn { border: 1px solid #e4e4e7; background: #f4f4f5; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; color: #52525b; transition: all 0.2s; }
     .style-btn.active { background: #000; color: white; border-color: #000; }
     
     .input-group { display: flex; gap: 8px; margin-bottom: 8px; }
@@ -45,8 +45,7 @@
   <div class="card">
     <span class="label">아이콘 스타일</span>
     <div class="style-btns">
-      <button class="style-btn active" onclick="setStyle('2D 플랫 v1')">2D 플랫 v1</button>
-      <button class="style-btn" onclick="setStyle('2D 플랫 v2')">2D 플랫 v2</button>
+      <button class="style-btn active" onclick="setStyle('2D 플랫')">2D 플랫</button>
       <button class="style-btn" onclick="setStyle('3D 스타일')">3D 스타일</button>
     </div>
 
@@ -72,26 +71,106 @@
   </div>
 
   <script>
+    let currentStyle = "2D 플랫";
     let selectedEnglishText = "";
 
-    const BASE_PROMPT_TEMPLATE = `Create a cohesive set of minimalist flat vector icons.
+    // 📌 [여기에서 스타일별 고정 프롬프트를 수정하세요]
+    const BASE_PROMPTS = {
+      '2D 플랫': `Create a cohesive set of minimalist flat vector icons.
 
-SUBJECT: {{SELECTED_TEXT}}
+— FOUR OPTIONS —
+* If the Subject line names one subject, draw 4 different icons of it. They must differ in FORM — different shapes, proportions, framing, or ways of picturing the idea. Four recolours of one drawing is a failure
+* If the Subject line lists several subjects, draw one icon per subject in the order given, and use the colour named in front of each subject as that icon's dominant tone
+* Lay them out as a 2x2 grid on one white canvas, each centred in its cell at about 70% of the cell with even margin
+* No labels, frames, dividing lines, or background shapes
 
-STYLE RULES:
-* Exactly 3 colors per icon
-* Choose 3 colors that best match the subject's metaphor, meaning, function, and emotional character
-* Use one dominant tone, one supporting tone, and one small accent tone
-* The 3 colors should feel cohesive, expressive, and naturally associated with the subject
-* White background
-* Solid flat colors only
-* No outlines, strokes, borders, frames, rings, or line-like elements
-* No gradients, shadows, texture, highlights, or 3D effects`;
+— FORM —
+* Draw the subject the way people conventionally recognise it, with the volume they expect: heaped things heaped, billowy things billowy
+* Keep the cues that make it recognisable — a sun's ring of rays, a flame's wavy outline, a tree's trunk and canopy
+* Reduce the subject to its simplest iconic form while preserving its strongest recognition cue
+* Prefer a single bold shape whenever one shape can carry the subject
+* Use 1–4 filled shapes per icon, where a repeated set — all the rays of a sun, all the petals of a flower — counts as one shape
+* Use large, chunky, rounded forms with generous negative space
+* Nothing is smaller than about one eighth of the icon's width
+* Remove every detail that is not essential for recognition: no specks, grains, scattered dots, sparkles, markings, patterns or text
+* Repetition is for large structural parts only; never repeat small particles
+* The silhouette alone must identify the subject at small size
+
+— SHAPES ARE MASSES —
+* Each shape is a solid, compact colour mass
+* No outlines, strokes, borders, frames, rings, or line-like elements, in any colour including white
+* Do not create a shape by tracing or framing an object's contour
+* Avoid thin, narrow, elongated, tubular, or ribbon-like forms
+* Where the real object is transparent or hollow — a glass, a bottle, a window, a bulb, an hourglass — fill its body with a flat light colour instead of drawing its rim
+* Soft organic curves: flames, leaves, drops and clouds flow smoothly rather than being assembled from squares and circles
+* Visibly rounded corners and rounded ends on every form
+
+— NO GAPS INSIDE THE ICON —
+* Shapes touch directly: where two parts meet they share one edge, the colour changes at that edge, and nothing sits in between
+* No white gap, sliver, seam, or dividing line between adjacent shapes
+* When one object overlaps another, the front object sits flat on the back one — no white halo, keyline, or offset outline around it; the two are told apart by colour alone
+* Overlap shapes generously rather than butting them edge to edge; a slight overlap is always safer than a slight gap
+* A shape's outer contour may be sculpted to express its material — the tips of a broom's bristles, the lobes of a leaf, the tongues of a flame — with broad, shallow, rounded cuts that leave it one connected mass
+* Keep those cuts wider than about one eighth of the icon's width, and never deep enough to break the mass into pieces; no narrow slits and no hairline wedges
+* Apart from those contour cuts, white appears only outside the icon's outer silhouette — never as a gap between two shapes, and never as a line inside one
+* The finished icon reads as one continuous area of colour, like pieces of cut paper pushed tight together
+
+— COLOUR —
+* Decide how many masses a person perceives the subject as: usually 1 or 2, at most 3
+* A mass is one material, joined together and moving together — a plant's stem and leaves are ONE mass, the soil beneath is a second
+* Give each mass exactly one flat colour; parts inside a mass share that colour and are told apart by silhouette only
+* Never split one mass into two shades
+* Use 3 colours where the subject allows it and 2 where it does not: one dominant tone, one supporting tone, one small accent tone
+* The colours should feel cohesive, expressive, and naturally associated with the subject's meaning and emotional character
+* Use at most 2 colour families; pick the family that fits the subject's meaning — orange and amber lead this set
+* Take a second family only when a material's conventional colour is needed to recognise it (brown wood, blue water, green plants)
+* Choose from:
+    orange  #FF7600  #FF9350  #FFC695
+    amber   #FFC200  #FFE8BF  #FBEEAD
+    green   #1FA644  #D9E9D2
+    blue    #008AFF  #4CA3FF  #C6EBFF
+    brown   #E2B674   — material colour only
+    grey    #99A3AB   — neutral and inactive only
+* Deep tones #F74200 #00741E #0061CD only when something must stand out
+* Two touching colours must differ clearly in brightness, since nothing separates them
+
+— RENDERING —
+* Solid flat colour only: matte, even brightness throughout, like cut paper laid flat
+* No gradients, shadows, highlights, texture, gloss, or 3D
+* Uniform ambient light, so no lit side and no shaded side
+* Orthographic front view with parallel edges staying parallel; no perspective, no isometric
+* Clean crisp vector edges on a white background
+* Consistent proportions and visual weight across all four icons
+* Friendly, playful, modern visual language
+
+— HOW TO THINK —
+* Think in terms of a few solid colour masses, not a drawing
+* Build the subject from filled shapes rather than outlines or contours
+* Separate things by colour, never by a gap
+* Shape the outside edge to say what something is made of; do not cut into the inside to say it
+* Never use a thin shape to represent a feature; omit it or replace it with a simple, substantial shape
+* Do not represent the subject realistically or literally
+* Simplify aggressively, but always preserve the core visual cue that makes the subject immediately recognisable
+* When simplicity conflicts with recognisability, prioritise recognisability
+
+Avoid: white gaps between shapes, white keylines, halos, offset outlines, seams,
+narrow slits, hairline wedges, hollow outlines, rims, frames, thin rails, specks,
+grains, scattered dots, sparkles, gradients, shadows, strokes, 3D, isometric,
+perspective, texture, gloss, transparency, hairlines, surface detail, labels, text,
+purple, violet, yellow-green.
+
+Subject : [subject]
+Note: [note]`,
+
+      '3D 스타일': `[note], minimalist stylized 3D icon, simple chunky rounded forms, highly recognizable simplified silhouette, Cinema 4D inspired, soft inflated toy like geometry, generous bevels, smooth organic curves, bold rounded proportions. Colors naturally reflect the object's real world metaphor, limited to 3 distinct tones clearly differentiated in hue, value, and saturation. Flat solid matte colors, clean white background, gentle studio lighting, soft ambient occlusion, subtle contact shadow. Centered isolated composition, generous negative space, orthographic slightly elevated front facing isometric like perspective. Polished 3D modeling, crisp smooth edges, playful modern app icon aesthetic. No internal details, no outlines, no textures, no patterns, no gradients, no metallic, no glass, no transparency, no photorealism, no complex geometry, no thin elements, no extra objects. Cohesive, balanced, restrained tonal palette with clear visual separation between the 3 tones.`
+    };
 
     function setStyle(name) {
+      currentStyle = name;
       document.querySelectorAll('.style-btn').forEach(btn => {
         btn.classList.toggle('active', btn.innerText === name);
       });
+      updateFinalPrompt();
     }
 
     async function fetchSuggestions() {
@@ -158,7 +237,9 @@ STYLE RULES:
     }
 
     function updateFinalPrompt() {
-      const full = BASE_PROMPT_TEMPLATE.replace('{{SELECTED_TEXT}}', selectedEnglishText);
+      const template = BASE_PROMPTS[currentStyle] || BASE_PROMPTS['2D 플랫'];
+      const targetText = selectedEnglishText || "[선택된 영어 문장]";
+      const full = template.replace('{{SELECTED_TEXT}}', targetText);
       document.getElementById('finalResult').value = full;
     }
 
