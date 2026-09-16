@@ -1,20 +1,37 @@
 const https = require('https');
 
 module.exports = async (req, res) => {
-  // CORS 및 HTTP 메소드 제어
+  // CORS 및 헤더 설정
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
-  const { keyword } = req.body || {};
-  if (!keyword) return res.status(400).json({ error: '키워드를 입력해주세요.' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'POST 요청만 허용됩니다.' });
+  }
+
+  // req.body 안전 파싱 (문자열로 들어왔을 경우 대비)
+  let bodyData = req.body;
+  if (typeof bodyData === 'string') {
+    try {
+      bodyData = JSON.parse(bodyData);
+    } catch (e) {
+      bodyData = {};
+    }
+  }
+
+  const keyword = bodyData?.keyword;
+  if (!keyword) {
+    return res.status(400).json({ error: '키워드가 전달되지 않았습니다.' });
+  }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: 'ANTHROPIC_API_KEY가 설정되지 않았습니다.' });
+    return res.status(500).json({ error: 'Vercel에 ANTHROPIC_API_KEY 환경변수가 세팅되지 않았습니다.' });
   }
 
   const payload = JSON.stringify({
@@ -25,7 +42,7 @@ module.exports = async (req, res) => {
         role: 'user',
         content: `주제 키워드: "${keyword}"
 이 키워드에 맞는 다양한 구도/동작의 아이콘 묘사 문장 3개를 생성해줘.
-반드시 마크다운 코드블록(```)이나 설명 없이 pure JSON 배열 형식으로만 응답해줘.
+반드시 마크다운 코드블록(\`\`\`)이나 설명 없이 pure JSON 배열 형식으로만 응답해줘.
 
 [
   {"ko": "몸을 동그랗게 말고 잠든 듯한 고양이", "en": "a cat curled into a tight, sleeping ball"},
@@ -67,13 +84,13 @@ module.exports = async (req, res) => {
 
         return res.status(200).json({ suggestions });
       } catch (err) {
-        return res.status(500).json({ error: `응답 파싱 실패: ${err.message}` });
+        return res.status(500).json({ error: `응답 처리 실패: ${err.message}` });
       }
     });
   });
 
   request.on('error', (err) => {
-    return res.status(500).json({ error: `네트워크 요청 실패: ${err.message}` });
+    return res.status(500).json({ error: `네트워크 연동 실패: ${err.message}` });
   });
 
   request.write(payload);
