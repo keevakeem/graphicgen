@@ -1,0 +1,11 @@
+{
+  "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/(.*).glb",
+      "headers": [
+        { "key": "Content-Type", "value": "model/gltf-binary" }
+      ]
+    }
+  ]
+}
