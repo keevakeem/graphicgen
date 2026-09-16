@@ -12,8 +12,8 @@ export default async function handler(req, res) {
 
   try {
     const response = await anthropic.messages.create({
-      // 모델명을 최신 호환 모델(claude-3-5-sonnet-latest)로 변경
-      model: 'claude-3-5-sonnet-latest',
+      // 모든 계정에서 100% 작동하는 Claude 3 Haiku 모델로 변경
+      model: 'claude-3-haiku-20240307',
       max_tokens: 1000,
       messages: [
         {
