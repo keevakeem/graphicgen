@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>팀 3D 에셋 프롬프트 생성기</title>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+  <style>
+    :root { --primary: #0070f3; --bg: #fafafa; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); max-width: 960px; margin: 0 auto; padding: 20px; color: #111; }
+    header { border-bottom: 1px solid #eaeaea; padding-bottom: 15px; margin-bottom: 25px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+    .card { background: white; border: 1px solid #eaeaea; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
+    model-viewer { width: 100%; height: 320px; background-color: #f0f0f0; border-radius: 6px; }
+    label { font-weight: 600; font-size: 14px; margin-top: 15px; display: block; }
+    input[type="text"], textarea, input[type="file"] { width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+    button { width: 100%; background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 15px; }
+    button:hover { opacity: 0.9; }
+    .result-box { background: #f4f4f4; border: 1px solid #ddd; padding: 15px; border-radius: 6px; margin-top: 10px; white-space: pre-wrap; font-family: monospace; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>🎨 Team 3D Prompt Workspace</h2>
+    <p style="color: #666; margin:0;">3D 에셋 프리뷰 확인 및 고정 프롬프트 자동 조합 도구</p>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <label>1. 3D 에셋 파일 업로드 (.glb / .gltf)</label>
+      <input type="file" id="fileInput" accept=".glb, .gltf" style="margin-bottom: 15px;">
+      
+      <model-viewer id="viewer" camera-controls auto-rotate shadow-intensity="1">
+        <div slot="poster" style="text-align:center; line-height:320px; color: #999;">.glb 파일 선택 시 3D 프리뷰 재생</div>
+      </model-viewer>
+    </div>
+
+    <div class="card">
+      <label>2. 키워드 입력</label>
+      <input type="text" id="keyword" placeholder="예: 사이버펑크 스타일, 4k 텍스처">
+
+      <label>3. 고정 프롬프트</label>
+      <textarea id="basePrompt" rows="4">이 3D 모델을 기반으로 아래 조건을 완벽히 준수하여 작업을 진행해 주세요.
+- 스타일: 하이엔드 3D 렌더링
+- 라이팅: 스튜디오 소프트 옥테인 라이팅</textarea>
+
+      <button onclick="copyPrompt()">프롬프트 생성 및 복사</button>
+
+      <label>최종 생성 결과물</label>
+      <div id="result" class="result-box">키워드를 입력하면 조합된 프롬프트가 표시됩니다.</div>
+    </div>
+  </div>
+
+  <script>
+    let fileName = "";
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        fileName = file.name;
+        document.getElementById('viewer').src = URL.createObjectURL(file);
+      }
+    });
+
+    function copyPrompt() {
+      const kw = document.getElementById('keyword').value.trim();
+      const base = document.getElementById('basePrompt').value.trim();
+
+      if (!kw) { alert('키워드를 입력해주세요!'); return; }
+
+      const assetPrefix = fileName ? `[대상 에셋: ${fileName}] ` : '';
+      const generatedLine = `${assetPrefix}'${kw}' 키워드에 대한 상세 작업 요구사항입니다.`;
+      const fullPrompt = `${generatedLine}\n\n${base}`;
+
+      document.getElementById('result').innerText = fullPrompt;
+      navigator.clipboard.writeText(fullPrompt).then(() => {
+        alert('클립보드에 복사되었습니다!');
+      });
+    }
+  </script>
+</body>
+</html>
