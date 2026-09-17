@@ -7,10 +7,10 @@
   <style>
     * { box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f4f5; max-width: 680px; margin: 40px auto; padding: 20px; color: #18181b; }
-
-    /* 상단 헤더 및 이동 버튼 스타일 */
+    
     .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
     .header-title { flex: 1; }
+    h1 { font-size: 24px; font-weight: 800; margin: 0 0 8px 0; }
     .sub-desc { color: #71717a; font-size: 13.5px; line-height: 1.5; margin: 0; }
     
     .link-btn {
@@ -31,13 +31,8 @@
       margin-left: 12px;
     }
     .link-btn:hover { background: #f4f4f5; border-color: #d4d4d8; }
-    
-    
-    
-    
+
     .card { background: white; border-radius: 16px; padding: 28px; border: 1px solid #e4e4e7; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
-    h1 { font-size: 24px; font-weight: 800; margin: 0 0 8px 0; }
-    .sub-desc { color: #71717a; font-size: 13.5px; line-height: 1.5; margin-bottom: 24px; }
     
     .label { font-size: 12px; font-weight: 700; color: #52525b; margin-bottom: 8px; display: block; }
     .style-btns { display: flex; gap: 8px; margin-bottom: 20px; }
@@ -49,8 +44,19 @@
     .btn-submit { background: #09090b; color: white; border: none; padding: 0 18px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; }
     .btn-submit:disabled { opacity: 0.5; }
     
-    .category-tag { font-size: 12px; color: #71717a; margin-bottom: 24px; }
+    .category-tag { font-size: 12px; color: #71717a; margin-bottom: 20px; }
     
+    #customNote {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid #e4e4e7;
+      border-radius: 10px;
+      font-size: 14px;
+      outline: none;
+      background: #f9f9fb;
+      margin-bottom: 20px;
+    }
+
     .suggestion-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
     .suggestion-item { border: 1px solid #e4e4e7; border-radius: 12px; padding: 14px 16px; cursor: pointer; display: flex; gap: 12px; align-items: flex-start; transition: all 0.2s; }
     .suggestion-item.selected { border: 2px solid #000; background: #fafafa; }
@@ -67,17 +73,16 @@
 </head>
 <body>
 
- <!-- 헤더 영역 (제목 + 우측 이동 버튼) -->
   <div class="header-container">
     <div class="header-title">
       <h1>아이콘 프롬프트 생성기</h1>
       <p class="sub-desc">키워드 하나만 입력하면 Claude가 그 주제에 맞는 한국어+영어 묘사를 새로 만들어, 고정 스타일 프롬프트에 끼운 완성된 프롬프트로 돌려드려요. 어떤 키워드든 영어로 나와요.</p>
     </div>
-    <!-- 오른쪽 상단 이동 버튼 -->
     <a href="https://flow.google.com/" target="_blank" rel="noopener noreferrer" class="link-btn">
       Flow 이동 ↗
     </a>
   </div>
+
   <div class="card">
     <span class="label">아이콘 스타일</span>
     <div class="style-btns">
@@ -87,12 +92,15 @@
 
     <span class="label">주제 키워드</span>
     <div class="input-group">
-      <input type="text" id="keyword" placeholder="고양이" onkeypress="if(event.key==='Enter') fetchSuggestions()">
+      <input type="text" id="keyword" placeholder="고양이" oninput="updateFinalPrompt()" onkeypress="if(event.key==='Enter') fetchSuggestions()">
       <button class="btn-submit" id="submitBtn" onclick="fetchSuggestions()">문장 제안받기</button>
     </div>
     <div class="category-tag" id="statusTag"></div>
 
-    <span class="label">추천 문장 · 하나를 선택하세요</span>
+    <span class="label">직접 문장 입력 (선택 사항)</span>
+    <input type="text" id="customNote" placeholder="예: a cute sleeping cat with a tiny hat" oninput="handleCustomInput()">
+
+    <span class="label">추천 문장 · 하나를 선택하세요 (다시 누르면 선택 해제)</span>
     <div class="suggestion-list" id="suggestionList">
       <div style="color: #a1a1aa; font-size: 13px; text-align: center; padding: 20px; border: 1px dashed #e4e4e7; border-radius: 10px;">
         키워드를 입력하고 문장 제안받기 버튼을 눌러주세요.
@@ -108,9 +116,9 @@
 
   <script>
     let currentStyle = "2D 플랫";
+    let currentSubjectEn = "";
     let selectedEnglishText = "";
 
-    // 📌 [여기에서 스타일별 고정 프롬프트를 수정하세요]
     const BASE_PROMPTS = {
       '2D 플랫': `Create a cohesive set of minimalist flat vector icons.
 
@@ -201,6 +209,7 @@ Note: [note]`,
       '3D 스타일': `[note], minimalist stylized 3D icon, simple chunky rounded forms, highly recognizable simplified silhouette, Cinema 4D inspired, soft inflated toy like geometry, generous bevels, smooth organic curves, bold rounded proportions. Colors naturally reflect the object's real world metaphor, limited to 3 distinct tones clearly differentiated in hue, value, and saturation. Flat solid matte colors, clean white background, gentle studio lighting, soft ambient occlusion, subtle contact shadow. Centered isolated composition, generous negative space, orthographic slightly elevated front facing isometric like perspective. Polished 3D modeling, crisp smooth edges, playful modern app icon aesthetic. No internal details, no outlines, no textures, no patterns, no gradients, no metallic, no glass, no transparency, no photorealism, no complex geometry, no thin elements, no extra objects. Cohesive, balanced, restrained tonal palette with clear visual separation between the 3 tones.`
     };
 
+
     function setStyle(name) {
       currentStyle = name;
       document.querySelectorAll('.style-btn').forEach(btn => {
@@ -239,23 +248,27 @@ Note: [note]`,
           throw new Error(data.error || '알 수 없는 에러가 발생했습니다.');
         }
 
-        list.innerHTML = '';
-        data.suggestions.forEach((item, idx) => {
-          const div = document.createElement('div');
-          div.className = 'suggestion-item' + (idx === 0 ? ' selected' : '');
-          div.onclick = function() { selectItem(div, item.en); };
-          div.innerHTML = '<div class="radio-circle"></div>' +
-                          '<div>' +
-                            '<div class="item-ko">' + item.ko + '</div>' +
-                            '<div class="item-en">' + item.en + '</div>' +
-                          '</div>';
-          list.appendChild(div);
-        });
+        currentSubjectEn = data.subjectEn || keyword;
+        selectedEnglishText = "";
+        document.getElementById('customNote').value = "";
 
-        if (data.suggestions.length > 0) {
-          selectItem(list.children[0], data.suggestions[0].en);
+        list.innerHTML = '';
+        if (data.suggestions && data.suggestions.length > 0) {
+          data.suggestions.forEach((item) => {
+            const div = document.createElement('div');
+            div.className = 'suggestion-item';
+            div.onclick = function() { toggleSelectItem(div, item.en); };
+            div.innerHTML = '<div class="radio-circle"></div>' +
+                            '<div>' +
+                              '<div class="item-ko">' + item.ko + '</div>' +
+                              '<div class="item-en">' + item.en + '</div>' +
+                            '</div>';
+            list.appendChild(div);
+          });
         }
+
         document.getElementById('statusTag').innerText = `카테고리: [${keyword}] (기본 규칙)`;
+        updateFinalPrompt();
 
       } catch (err) {
         alert('생성 실패: ' + err.message);
@@ -265,26 +278,43 @@ Note: [note]`,
       }
     }
 
-    function selectItem(element, enText) {
-      document.querySelectorAll('.suggestion-item').forEach(el => el.classList.remove('selected'));
-      element.classList.add('selected');
-      selectedEnglishText = enText;
+    function toggleSelectItem(element, enText) {
+      if (element.classList.contains('selected')) {
+        element.classList.remove('selected');
+        selectedEnglishText = "";
+      } else {
+        document.querySelectorAll('.suggestion-item').forEach(el => el.classList.remove('selected'));
+        element.classList.add('selected');
+        selectedEnglishText = enText;
+        document.getElementById('customNote').value = "";
+      }
       updateFinalPrompt();
     }
 
-   function updateFinalPrompt() {
-  const keyword = document.getElementById('keyword').value.trim() || "[subject]";
-  const note = selectedEnglishText || "[note]";
-  
-  let template = BASE_PROMPTS[currentStyle] || BASE_PROMPTS['2D 플랫'];
+    function handleCustomInput() {
+      const customVal = document.getElementById('customNote').value.trim();
+      document.querySelectorAll('.suggestion-item').forEach(el => el.classList.remove('selected'));
+      selectedEnglishText = customVal;
+      updateFinalPrompt();
+    }
 
-  // [subject]와 [note] 태그 치환 (대소문자/전체 치환 처리)
-  const full = template
-    .replaceAll('[subject]', keyword)
-    .replaceAll('[note]', note);
+    function updateFinalPrompt() {
+      const inputKeyword = document.getElementById('keyword').value.trim();
+      const subjectVal = currentSubjectEn || inputKeyword || "[subject]";
 
-  document.getElementById('finalResult').value = full;
-}
+      let template = BASE_PROMPTS[currentStyle] || BASE_PROMPTS['2D 플랫'];
+
+      let full = template.replaceAll('[subject]', subjectVal);
+
+      if (selectedEnglishText) {
+        full = full.replaceAll('[note]', selectedEnglishText);
+      } else {
+        full = full.split('\n').filter(line => !line.includes('[note]')).join('\n');
+      }
+
+      document.getElementById('finalResult').value = full;
+    }
+
     function copyResult() {
       const text = document.getElementById('finalResult').value;
       if (!text) return;
