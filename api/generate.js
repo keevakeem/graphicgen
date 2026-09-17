@@ -27,14 +27,18 @@ module.exports = async (req, res) => {
       {
         role: 'user',
         content: `주제 키워드: "${keyword}"
-이 키워드에 맞는 다양한 구도/동작의 아이콘 묘사 문장 3개를 생성해줘.
-반드시 마크다운 코드블록(\`\`\`)이나 설명 없이 pure JSON 배열 형식으로만 응답해줘.
+1. 이 키워드 단어 자체의 가장 표준적인 영단어 1개를 'subjectEn'으로 추출해줘.
+2. 이 키워드에 맞는 다양한 구도/동작의 아이콘 묘사 문장 3개를 생성해줘.
 
-[
-  {"ko": "몸을 동그랗게 말고 잠든 듯한 고양이", "en": "a cat curled into a tight, sleeping ball"},
-  {"ko": "고개를 살짝 기울인 채 앉아있는 동글동글한 고양이", "en": "a round, chubby cat sitting with its head tilted"},
-  {"ko": "웅크리고 앉아 꼬리를 동그랗게 만 통통한 고양이", "en": "a plump cat curled up with its tail wrapped around itself"}
-]`
+반드시 다른 설명 없이 아래 pure JSON 객체 형식으로만 응답해줘.
+{
+  "subjectEn": "cat",
+  "suggestions": [
+    {"ko": "몸을 동그랗게 말고 잠든 듯한 고양이", "en": "a cat curled into a tight, sleeping ball"},
+    {"ko": "고개를 살짝 기울인 채 앉아있는 동글동글한 고양이", "en": "a round, chubby cat sitting with its head tilted"},
+    {"ko": "웅크리고 앉아 꼬리를 동그랗게 만 통통한 고양이", "en": "a plump cat curled up with its tail wrapped around itself"}
+  ]
+}`
       }
     ]
   });
