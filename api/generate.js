@@ -20,17 +20,17 @@ module.exports = async (req, res) => {
   if (!apiKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY가 세팅되지 않았습니다.' });
 
   const payload = JSON.stringify({
-    // 피그마 플러그인에서 성공한 Haiku 모델 지정
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 1000,
     messages: [
       {
         role: 'user',
         content: `주제 키워드: "${keyword}"
-1. 이 키워드 단어 자체의 가장 표준적인 영단어 1개를 'subjectEn'으로 추출해줘.
+1. 이 키워드 단어 자체의 가장 표준적인 영단어 1개를 'subjectEn'으로 추출해줘. (예: "고양이" -> "cat")
 2. 이 키워드에 맞는 다양한 구도/동작의 아이콘 묘사 문장 3개를 생성해줘.
 
-반드시 다른 설명 없이 아래 pure JSON 객체 형식으로만 응답해줘.
+반드시 다른 부연설명 없이 아래 형식의 JSON 객체만 응답해줘:
+
 {
   "subjectEn": "cat",
   "suggestions": [
@@ -68,11 +68,17 @@ module.exports = async (req, res) => {
           });
         }
 
-        const rawText = parsedData.content?.[0]?.text?.trim() || '[]';
-        const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const suggestions = JSON.parse(cleanJson);
+        const rawText = parsedData.content?.[0]?.text?.trim() || '{}';
+        
+        // JSON 부분만 안전하게 정규식으로 추출 (앞뒤 텍스트/코드블록 무시)
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+          throw new Error('AI 응답에서 JSON 형식을 찾을 수 없습니다.');
+        }
 
-        return res.status(200).json({ suggestions });
+        const resultObj = JSON.parse(jsonMatch[0]);
+        return res.status(200).json(resultObj);
+
       } catch (err) {
         return res.status(500).json({ error: `응답 파싱 실패: ${err.message}` });
       }
