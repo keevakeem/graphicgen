@@ -315,12 +315,23 @@ Note: [note]`,
       document.getElementById('finalResult').value = full;
     }
 
-    function copyResult() {
-      const text = document.getElementById('finalResult').value;
-      if (!text) return;
-      navigator.clipboard.writeText(text).then(() => alert('클립보드에 복사되었습니다!'));
-    }
-
+   function copyResult() {
+  const text = document.getElementById('finalResult').value;
+  if (!text) return;
+  
+  const copyBtn = document.querySelector('.btn-copy');
+  
+  navigator.clipboard.writeText(text).then(() => {
+    // 팝업 대신 버튼 텍스트를 '복사됨!'으로 1.5초간 변경
+    copyBtn.innerText = '복사됨!';
+    copyBtn.style.background = '#e4e4e7';
+    
+    setTimeout(() => {
+      copyBtn.innerText = '복사';
+      copyBtn.style.background = '#f4f4f5';
+    }, 1500);
+  });
+}
     updateFinalPrompt();
   </script>
 </body>
